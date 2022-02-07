@@ -26,6 +26,11 @@
     uniform float time;
     uniform vec2 resolution;
 
+    uniform float aDiffMod;
+    uniform float bDiffMod;
+    uniform float feedMod;
+    uniform float killMod;
+
     // simulation texture state, swapped each frame
     uniform sampler2D state;
 
@@ -73,16 +78,16 @@
         float curr_A = getA(0, 0);
         float curr_B = getB(0, 0);
 
-        float diff_A = 1.0;
-        float diff_B = .5;
+        float diff_A = 1.0 + aDiffMod;
+        float diff_B = .5 + bDiffMod;
         float x_dist = abs(st.x - .5);
         float y_dist = abs(st.y - .5);
         float dist = pow((pow(x_dist, 2.) + pow(y_dist, 2.)), .5);
         //diff_A = .5 / y_dist;
         diff_B = .5 * dist;
         diff_B = diff_B * (time / 5.);
-        float feed = .055;
-        float kill = .08;
+        float feed = .055 + feedMod;
+        float kill = .08 + killMod;
 
         float new_A = curr_A + ((diff_A * pow(laplaceA(), 2.)) - pow((curr_A * curr_B), 2.) + (feed * (1. - curr_A)));
         float new_B = curr_B + ((diff_B * pow(laplaceB(), 2.)) + pow((curr_A * curr_B), 2.) - (kill + feed) * curr_B);
@@ -131,13 +136,50 @@
         uTime, uSimulationState,
         textureBack, textureFront,
         dimensions = { width:null, height:null },
-        uDiffRateA
+        diffModA, diffModB, feedMod, killMod,
+        uDiffModA, uDiffModB, uFeedMod, uKillMod
 
     window.onload = function() {
         const canvas = document.getElementById( 'gl' )
         gl = canvas.getContext( 'webgl2' )
         canvas.width = dimensions.width = window.innerWidth
         canvas.height = dimensions.height = window.innerHeight
+
+        //Keyboard interactions
+        diffModA = 0.;
+        diffModB = 0.;
+        feedMod = 0.;
+        killMod = 0.;
+        window.onkeydown = function(event) {
+            console.log("key registered")
+            switch (event.key) {
+                case 'j':
+                    diffModB -= .1;
+                    break;
+                case 'l':
+                    diffModB += .1;
+                    break;
+                case 'i':
+                    diffModA += .1;
+                    break;
+                case 'k':
+                    diffModA -= .1;
+                    break;
+                case 'w':
+                    feedMod += .01;
+                    break;
+                case 's':
+                    if (feedMod > 0) feedMod -= .01;
+                    break;
+                case 'a':
+                    if (killMod > 0) killMod -= .01;
+                    break;
+                case 'd':
+                    killMod += .01;
+                    break;
+            }
+
+        }
 
         // define drawing area of webgl canvas. bottom corner, width / height
         // XXX can't remember why we need the *2!
@@ -254,9 +296,16 @@
 
         // find a pointer to the uniform "time" in our fragment shader
         uTime = gl.getUniformLocation( simulationProgram, 'time' )
+        //Put in the other interaction uniforms
+        uDiffModA = gl.getUniformLocation(simulationProgram, 'aDiffMod')
+        uDiffModB = gl.getUniformLocation(simulationProgram, 'bDiffMod')
+        uFeedMod = gl.getUniformLocation(simulationProgram, 'feedMod')
+        uKillMod = gl.getUniformLocation(simulationProgram, 'killMod')
 
         //Also put time into the render shader
         rTime = gl.getUniformLocation(drawProgram, 'time')
+
+
 
         //uSimulationState = gl.getUniformLocation( simulationProgram, 'state' )
 
@@ -306,6 +355,13 @@
         // update time on CPU and GPU
         time++
         gl.uniform1f( uTime, time )
+
+        //Put in the interaction uniforms
+        gl.uniform1f(uDiffModA, diffModA)
+        gl.uniform1f(uDiffModB, diffModB)
+        gl.uniform1f(uFeedMod, feedMod)
+        gl.uniform1f(uKillMod, killMod)
+
 
         gl.bindFramebuffer( gl.FRAMEBUFFER, framebuffer )
         // use the framebuffer to write to our texFront texture
