@@ -78,14 +78,17 @@
         float curr_A = getA(0, 0);
         float curr_B = getB(0, 0);
 
-        float diff_A = 1.0 + aDiffMod;
-        float diff_B = .5 + bDiffMod;
+        float diff_A = 1.0;
+        float diff_B = .5;
         float x_dist = abs(st.x - .5);
         float y_dist = abs(st.y - .5);
         float dist = pow((pow(x_dist, 2.) + pow(y_dist, 2.)), .5);
         //diff_A = .5 / y_dist;
         diff_B = .5 * dist;
         diff_B = diff_B * (time / 5.);
+
+        diff_A += aDiffMod;
+        diff_B += bDiffMod;
         float feed = .055 + feedMod;
         float kill = .08 + killMod;
 
@@ -180,6 +183,7 @@
             }
 
         }
+
 
         // define drawing area of webgl canvas. bottom corner, width / height
         // XXX can't remember why we need the *2!
